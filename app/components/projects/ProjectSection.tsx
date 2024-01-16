@@ -9,7 +9,7 @@ import { ProjectList } from "./ProjectList";
 export const ProjectSection = async () => {
   const projects = await getProjects();
 
-  if (!projects.length) {
+  if (!projects) {
     return <div className="min-h-[20vh]"></div>;
   }
 
@@ -22,7 +22,7 @@ export const ProjectSection = async () => {
             Prosjekter
           </h2>
           <div className="md:px-8">
-            <ProjectList limit={3} />
+            <ProjectList projects={projects.slice(0, 3)} />
           </div>
           <div className="self-center">
             <Button

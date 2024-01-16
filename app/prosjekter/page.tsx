@@ -1,10 +1,12 @@
 import NextLink from "next/link";
 
 import { Link } from "@nextui-org/link";
+import { getProjects } from "@/utils/projects";
 
 import { ProjectList } from "../components/projects/ProjectList";
 
-const Prosjekter = () => {
+const Prosjekter = async () => {
+  const projects = await getProjects();
   return (
     <main className="py-12 px-4 md:px-12  bg-gradient-to-b from-blue-100 to-white">
       <section className="container">
@@ -22,7 +24,7 @@ const Prosjekter = () => {
           Prosjekter
         </h1>
         <div className="md:px-8">
-          <ProjectList />
+          <ProjectList projects={projects} />
         </div>
       </section>
     </main>
