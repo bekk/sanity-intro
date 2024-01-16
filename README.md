@@ -717,13 +717,214 @@ export const project: SchemaTypeDefinition = {
 
 ---
 
+### ❤️ 10. Legge til favoritter
+
+Vi ønsker gjerne muligheten til å vise frem akkurat de prosjektene vi vil på forsiden av porteføljen vår.
+Dette løser vi enkelt og greit med bruk av [_referanser_](https://www.sanity.io/docs/reference-type) i Sanity.
+
+#### 👉 Lage feltet
+
+🏆 Legg til støtte for en _liste_ med favorittprosjekter for forfatteren
+
+<details>
+<summary> 🚨 Løsningforslag </summary>
+
+Vi legger på et felt av typen `array` med typen `reference` på til `project` på Author-skjemaet
+
+I `sanity/schemas/author.ts`
+
+```ts
+export const author: SchemaTypeDefinition = {
+  name: "author",
+  type: "document",
+  title: "Forfatter",
+  fields: [
+    {
+      name: "name",
+      title: "Navn",
+      type: "string",
+      validation: (rule) => rule.required(),
+    },
+    {
+      name: "bio",
+      title: "Biografi",
+      type: "text",
+      rows: 3,
+      validation: (rule) => rule.required().min(30).max(160),
+    },
+    {
+      name: "image",
+      title: "Bilde",
+      type: "image",
+      options: {
+        hotspot: true,
+      },
+    },
+    {
+      name: "socials",
+      title: "Sosiale medier",
+      type: "object",
+      options: {
+        collapsible: true,
+        collapsed: true,
+      },
+      fields: [
+        {
+          name: "github",
+          type: "url",
+        },
+        {
+          name: "linkedin",
+          type: "url",
+        },
+        {
+          name: "twitter",
+          type: "url",
+        },
+      ],
+    },
+    {
+      name: "highlightedProjects",
+      title: "Favorittprosjekter",
+      type: "array",
+      of: [{ type: "reference", to: [{ type: "project" }] }],
+    },
+  ],
+};
+```
+
+</details>
+
+#### ⁉️ Hente ut og ta i bruk feltet
+
+Vi ønsker å oppdatere frontend-koden til å hente ut og ta i bruk favorittprosjekter istedenfor _alle_ prosjekter.
+
+Til nå har datahentingen vært på plass for oss. Datahenting i Sanity skjer i hovedsak gjennom spørringer i `GROQ` som sendes enten gjennom et API, eller en `Sanity-client`.
+
+For å hente ut prosjektene vi ønsker, må vi bryne oss på litt spørringer selv.
+
+https://www.sanity.io/docs/how-queries-work
+
+🏆 Lag en funksjon i `utils/projects.ts` som henter ut favoritt-prosjektene til en author, og ta den i bruk i `app/components/projects/ProjectSection`
+
+💡 Det ligger en ordentlig god introduksjon til GROQ og spørringer [_her_](https://www.sanity.io/docs/how-queries-work)
+
+💡 I Studioet er det en fane som heter [_Vision_](http://localhost:3000/studio/vision) der kan man prøve ut spørringer mot datasettet sitt.
+
+💡 For enkelhets skyld kan du bruke \*[\_type == 'author'][0] for å hente ut author-objektet, siden vi bare har ett.
+
+✅ Hvis du har flere prosjekter publisert, kan du velge ut et enkelt prosjekt som favorittprosjekt og se at listen på forsiden er andeledes en den som ligger på [prosjekt-utlistningen](http://localhost:3000/prosjekter).
+
+<details>
+<summary> 🚨 Løsningforslag </summary>
+
+Vi legger på et felt av typen `array` med typen `reference` på til `project` på Author-skjemaet
+
+I `utils/projects.ts` legger vi til funksjonen `getHighlightedProjects`.
+
+Her lager vi en spørring som henter ut `author`, men lager en prosjeksjon som løser ut en _liste_ med referanser.
+For enkelhets skyld kan vi legge til `.highlightedProjects` på slutten, for å bare hente ut `highlightedProjects` og ikke et `author`-objekt _med_ `highlightedProjects` som felt i seg 😵‍💫
+
+```ts
+export const getHighlightedProjects = async () => {
+  const query = groq`*[_type == 'author'][0]{
+    highlightedProjects[]->
+  }.highlightedProjects`;
+
+  return client.fetch<Project[]>(query, {
+    next: { revalidate: 0 },
+  });
+};
+```
+
+og i `app/components/projects/ProjectSection.tsx` erstatter du linjen
+
+```tsx
+const projects = await getProjects();
+```
+
+med
+
+```tsx
+const projects = await getHighlightedProjects();
+```
+
+</details>
+
+---
+
+### 🔧 11. Tilpasse utseende
+
+I Sanity er det ganske enkelt å tilpasse studioet. Det gir mange muligheter til å tilpasse verktøyet til redaktørene, men også muligheten til å bygge støtte for det aller meste.
+
+En av de vanligste endringene er å endre på komponentene som brukes for forskjellige visninger og input av feltene.
+Du kan lese litt om å utvide `input`-felter [her](https://www.sanity.io/docs/form-components) og om hele components-APIet [her](https://www.sanity.io/docs/component-api).
+
+Vi skal utvide Slug-feltet så "redaktøren" får se hele urlen hvor artikkelen ligger.
+
+🏆 Utvid Slug-feltet med en tekst som viser hele URL-en til et prosjekt.
+
+💡 Sanity har et [designsystem](https://www.sanity.io/ui) som man kan bruke for å bygge i samme stil som resten av Studioet.
+
+💡 Du kan hardkode starten av URL'en til prosjekter til `https://localhost:3000/prosjekter/<SLUG>`
+
+✅ Hvis alt går bra skal du se en en tekststreng med URL-en til prosjekter ved `Slug` feltet ditt på prosjekter.
+
+<details>
+<summary> 🚨 Løsningforslag </summary>
+
+Vi benytter oss av `props.renderDefault` for å enkelt _utvide_ slug-feltet og ikke tulle for mye med logikken i det.
+
+I filen `sanity/components/SlugInputWithUrl.tsx`
+
+```tsx
+import { Stack, Text } from "@sanity/ui";
+
+export const SlugInputWithUrl: FC<SlugInputProps> = (props) => {
+  return (
+    <Stack space={2}>
+      {props.renderDefault(props)}
+      <Text size={2} muted>
+        https://localhost:3000/prosjekter/{props.value?.current}
+      </Text>
+    </Stack>
+  );
+};
+```
+
+og registrerer vår custom input komponent der den skal brukes i `sanity/schemas/project.ts`
+
+```tsx
+    {
+      name: "slug",
+      type: "slug",
+      options: { source: "projectName" },
+      validation: (rule) => rule.required(),
+      components: {
+        input: SlugInputWithUrl,
+      },
+    },
+```
+
+og i `app/components/projects/ProjectSection.tsx` erstatter du linjen
+
+```tsx
+const projects = await getProjects();
+```
+
+med
+
+```tsx
+const projects = await getHighlightedProjects();
+```
+
+## </details>
+
 ### 🎉 Ferdig!
 
 Gratulerer! Da er du ferdig med portfolio-nettsiden 🤩.
 
 Hvis du vil så kan du prøve å bryne deg på noen av ekstraoppgavene ⭐️
-
----
 
 ## ⭐️ Ekstraoppgaver
 
