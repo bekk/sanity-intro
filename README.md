@@ -257,6 +257,7 @@ Vi skal nå utvide forsiden vår med litt lenker til forskjellige sosiale medier
 🏆 Lag et felt `socials` av typen `object` med underfelter `github`, `twitter` og `linkedin` som er lenker til forskjellige profiler.
 
 💡 Hvis man skal bruke URL'er finnes det en egen felt-type `url` som automatisk validerer at det er i riktig format.
+
 💡 Felter av typen `object` kan ta et felt `options` med `collapsible` og `collapsed` for å enkelt "lukke" objektet.
 
 ✅ Fyll ut feltene og publiser dokumentet på nytt. Forsiden skal nå ha lenker til de forskjellige feltene. Du trenger ikke fylle ut alle hvis du ikke bruker alle tjenestene. Feltene er tross alt ikke _påkrevd_.
